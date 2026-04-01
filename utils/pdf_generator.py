@@ -1,7 +1,7 @@
 import io
 import re
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from datetime import datetime
@@ -28,7 +28,13 @@ def generate_clinical_pdf(report_data: dict) -> io.BytesIO:
     elements = []
     
     # Header Logo / App Name
-    elements.append(Paragraph("<b>AI Health Assistant</b>", title_style))
+    try:
+        logo = Image("assets/images/logo.png", width=60, height=60)
+        elements.append(logo)
+    except Exception:
+        pass
+    
+    elements.append(Paragraph("<b>Hayat AI Health Assistant</b>", title_style))
     elements.append(Paragraph("Clinical-Grade Health Assessment Report", styles['Heading3']))
     elements.append(Spacer(1, 12))
     
@@ -129,8 +135,14 @@ def generate_simple_pdf(title: str, content: str) -> io.BytesIO:
     
     elements = []
     
-    # Header Log / App Name
-    elements.append(Paragraph("<b>AI Health Assistant</b>", title_style))
+    # Header Logo / App Name
+    try:
+        logo = Image("assets/images/logo.png", width=60, height=60)
+        elements.append(logo)
+    except Exception:
+        pass
+        
+    elements.append(Paragraph("<b>Hayat AI Health Assistant</b>", title_style))
     elements.append(Paragraph(title, styles['Heading3']))
     elements.append(Spacer(1, 12))
     

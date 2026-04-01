@@ -42,8 +42,12 @@ def show_auth_page():
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("Hayat 🩺")
-    st.markdown("### Your Complete AI Health Assistant")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("assets/images/logo.png", use_column_width=True)
+        
+    st.markdown("<h1 style='text-align: center; margin-top: -20px;'>Hayat</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; margin-bottom: 20px;'>Your Complete AI Health Assistant</h3>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:

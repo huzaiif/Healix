@@ -4,7 +4,7 @@ from auth.auth import show_auth_page, logout_user
 from utils.helpers import load_css
 
 # Set page configuration MUST BE THE FIRST STREAMLIT COMMAND
-st.set_page_config(page_title="Hayat", layout="wide", page_icon="🧑‍⚕️")
+st.set_page_config(page_title="Hayat", layout="wide", page_icon="assets/images/logo.png")
 
 # Pages imports
 from pages.dashboard import show_dashboard
@@ -27,6 +27,7 @@ def main():
     else:
         # Sidebar for navigation
         with st.sidebar:
+            st.image("assets/images/logo.png", use_column_width=True)
             st.markdown(f"### 👋 Welcome, {st.session_state['username']}")
             
             selected = option_menu(
