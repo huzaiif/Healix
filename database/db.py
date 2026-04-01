@@ -131,3 +131,22 @@ def delete_report(report_id, user_id):
     cursor.execute("DELETE FROM saved_reports WHERE id = ? AND user_id = ?", (report_id, user_id))
     conn.commit()
     conn.close()
+
+def save_vitals_record(user_id, hr, temp, spo2, sys_bp, dia_bp, symptoms, risk_level, report_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO vitals_history 
+        (user_id, heart_rate, temperature, spo2, sys_bp, dia_bp, symptoms, ai_risk_level, report_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, hr, temp, spo2, sys_bp, dia_bp, symptoms, risk_level, report_id))
+    conn.commit()
+    conn.close()
+
+def get_vitals_history(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM vitals_history WHERE user_id = ? ORDER BY timestamp ASC", (user_id,))
+    records = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in records]

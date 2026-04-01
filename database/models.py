@@ -69,6 +69,24 @@ def init_db():
         )
     ''')
 
+    # Create Vitals History Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS vitals_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            heart_rate REAL,
+            temperature REAL,
+            spo2 REAL,
+            sys_bp REAL,
+            dia_bp REAL,
+            symptoms TEXT,
+            ai_risk_level TEXT,
+            report_id TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
+
     conn.commit()
     conn.close()
 

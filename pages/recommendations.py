@@ -41,15 +41,52 @@ def show_recommendations():
                 
             save_recommendation(user_id, diagnosis, "Diabetes")
             
-            st.subheader("Health Advice & Tips")
-            with st.spinner("Generating personalized health tips..."):
-                tips = generate_health_tips(diagnosis, "Diabetes")
-                st.write(tips)
+            st.subheader("Clinical AI Report & Advice")
+            with st.spinner("Generating structured report..."):
+                patient_info = {"patient_id": f"PT-{user_id:04d}", "age": Age, "gender": "Unknown"}
+                inputs_dict = {
+                    "Pregnancies": Pregnancies, "Glucose": Glucose, "Blood Pressure": BloodPressure,
+                    "Skin Thickness": SkinThickness, "Insulin": Insulin, "BMI": BMI,
+                    "Diabetes Pedigree Function": DiabetesPedigreeFunction, "Age": Age
+                }
                 
-                # Save as report
-                report_content = f"**Diagnosis:** {diagnosis}\n\n**Health Tips:**\n{tips}\n\n**Inputs:**\nPregnancies: {Pregnancies}, Glucose: {Glucose}, BP: {BloodPressure}, BMI: {BMI}"
-                save_report(user_id, "Diabetes Risk Assessment", report_content)
-                st.info("Report saved to your account automatically.")
+                from features.report_generator import generate_ml_structured_report
+                report_data = generate_ml_structured_report("Diabetes", patient_info, inputs_dict, diagnosis)
+                
+                if report_data:
+                    import uuid
+                    from datetime import datetime
+                    report_data["report_id"] = str(uuid.uuid4())
+                    st.session_state['diabetes_report'] = report_data
+                    st.session_state['diabetes_diagnosis'] = diagnosis
+
+                    report_content = f"**Diagnosis:** {diagnosis}\n\n**Risk Level:** {report_data.get('ai_analysis', {}).get('risk_level', 'Unknown')}\n\n**Summary:**\n{report_data.get('ai_analysis', {}).get('summary', '')}\n\n**Inputs:**\nPregnancies: {Pregnancies}, Glucose: {Glucose}, BP: {BloodPressure}, BMI: {BMI}"
+                    save_report(user_id, "Diabetes Risk Assessment", report_content)
+
+        if 'diabetes_report' in st.session_state:
+            report_data = st.session_state['diabetes_report']
+            
+            analysis = report_data.get('ai_analysis', {})
+            st.info(analysis.get('summary', ''))
+            
+            risk_level = analysis.get('risk_level', 'Unknown')
+            risk_color = "red" if str(risk_level).lower() == "high" else ("orange" if str(risk_level).lower() == "moderate" else "green")
+            st.markdown(f"**Risk Level:** <span style='color:{risk_color}; font-weight:bold;'>{str(risk_level).upper()}</span>", unsafe_allow_html=True)
+            
+            recs = report_data.get('recommendations', {})
+            if recs.get('immediate_actions'):
+                 st.warning("**Immediate Actions:**\n" + "\n".join([f"- {x}" for x in recs.get('immediate_actions', [])]))
+                 
+            from utils.pdf_generator import generate_clinical_pdf
+            pdf_buffer = generate_clinical_pdf(report_data)
+            from datetime import datetime
+            st.download_button(
+                label="⬇️ Download Official PDF Report",
+                data=pdf_buffer,
+                file_name=f"diabetes_report_{user_id}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
                 
     with tab2:
         st.subheader("Heart Disease Prediction")
@@ -85,14 +122,52 @@ def show_recommendations():
                 
             save_recommendation(user_id, diagnosis, "Heart Disease")
 
-            st.subheader("Health Advice & Tips")
-            with st.spinner("Generating personalized health tips..."):
-                tips = generate_health_tips(diagnosis, "Heart Disease")
-                st.write(tips)
+            st.subheader("Clinical AI Report & Advice")
+            with st.spinner("Generating structured report..."):
+                patient_info = {"patient_id": f"PT-{user_id:04d}", "age": age, "gender": "Male" if sex==1 else "Female"}
+                inputs_dict = {
+                    "Age": age, "Sex": sex, "Chest Pain Type": cp, "Resting Blood Pressure": trestbps,
+                    "Cholesterol": chol, "Fasting Blood Sugar": fbs, "Rest ECG": restecg,
+                    "Max Heart Rate": thalach, "Exercise Angina": exang
+                }
                 
-                report_content = f"**Diagnosis:** {diagnosis}\n\n**Health Tips:**\n{tips}\n\n**Inputs:**\nAge: {age}, Sex: {'Male' if sex==1 else 'Female'}, Cholestoral: {chol}, Max Heart Rate: {thalach}"
-                save_report(user_id, "Heart Disease Risk Assessment", report_content)
-                st.info("Report saved to your account automatically.")
+                from features.report_generator import generate_ml_structured_report
+                report_data = generate_ml_structured_report("Heart Disease", patient_info, inputs_dict, diagnosis)
+                
+                if report_data:
+                    import uuid
+                    from datetime import datetime
+                    report_data["report_id"] = str(uuid.uuid4())
+                    st.session_state['heart_report'] = report_data
+                    st.session_state['heart_diagnosis'] = diagnosis
+
+                    report_content = f"**Diagnosis:** {diagnosis}\n\n**Risk Level:** {report_data.get('ai_analysis', {}).get('risk_level', 'Unknown')}\n\n**Summary:**\n{report_data.get('ai_analysis', {}).get('summary', '')}\n\n**Inputs:**\nAge: {age}, Cholestoral: {chol}, Max Heart Rate: {thalach}"
+                    save_report(user_id, "Heart Disease Risk Assessment", report_content)
+
+        if 'heart_report' in st.session_state:
+            report_data = st.session_state['heart_report']
+            
+            analysis = report_data.get('ai_analysis', {})
+            st.info(analysis.get('summary', ''))
+            
+            risk_level = analysis.get('risk_level', 'Unknown')
+            risk_color = "red" if str(risk_level).lower() == "high" else ("orange" if str(risk_level).lower() == "moderate" else "green")
+            st.markdown(f"**Risk Level:** <span style='color:{risk_color}; font-weight:bold;'>{str(risk_level).upper()}</span>", unsafe_allow_html=True)
+            
+            recs = report_data.get('recommendations', {})
+            if recs.get('immediate_actions'):
+                 st.warning("**Immediate Actions:**\n" + "\n".join([f"- {x}" for x in recs.get('immediate_actions', [])]))
+                 
+            from utils.pdf_generator import generate_clinical_pdf
+            pdf_buffer = generate_clinical_pdf(report_data)
+            from datetime import datetime
+            st.download_button(
+                label="⬇️ Download Official PDF Report",
+                data=pdf_buffer,
+                file_name=f"heart_disease_report_{user_id}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
 
     with tab3:
         st.subheader("Parkinson's Disease Prediction")
@@ -141,14 +216,52 @@ def show_recommendations():
                 
             save_recommendation(user_id, diagnosis, "Parkinson's Disease")
 
-            st.subheader("Health Advice & Tips")
-            with st.spinner("Generating personalized health tips..."):
-                tips = generate_health_tips(diagnosis, "Parkinson's Disease")
-                st.write(tips)
+            st.subheader("Clinical AI Report & Advice")
+            with st.spinner("Generating structured report..."):
+                patient_info = {"patient_id": f"PT-{user_id:04d}", "age": "Unknown", "gender": "Unknown"}
+                inputs_dict = {
+                    "MDVP:Fo(Hz)": fo, "MDVP:Fhi(Hz)": fhi, "MDVP:Flo(Hz)": flo,
+                    "MDVP:Jitter(%)": Jitter_percent, "MDVP:Jitter(Abs)": Jitter_Abs,
+                    "MDVP:RAP": RAP, "MDVP:PPQ": PPQ, "Jitter:DDP": DDP
+                }
                 
-                report_content = f"**Diagnosis:** {diagnosis}\n\n**Health Tips:**\n{tips}\n\n**Inputs:**\nFo(Hz): {fo}, Fhi: {fhi}, Flo: {flo}"
-                save_report(user_id, "Parkinson's Risk Assessment", report_content)
-                st.info("Report saved to your account automatically.")
+                from features.report_generator import generate_ml_structured_report
+                report_data = generate_ml_structured_report("Parkinson's Disease", patient_info, inputs_dict, diagnosis)
+                
+                if report_data:
+                    import uuid
+                    from datetime import datetime
+                    report_data["report_id"] = str(uuid.uuid4())
+                    st.session_state['parkinsons_report'] = report_data
+                    st.session_state['parkinsons_diagnosis'] = diagnosis
+                    
+                    report_content = f"**Diagnosis:** {diagnosis}\n\n**Risk Level:** {report_data.get('ai_analysis', {}).get('risk_level', 'Unknown')}\n\n**Summary:**\n{report_data.get('ai_analysis', {}).get('summary', '')}\n\n**Inputs:**\nFo(Hz): {fo}, Fhi: {fhi}, Flo: {flo}"
+                    save_report(user_id, "Parkinson's Risk Assessment", report_content)
+
+        if 'parkinsons_report' in st.session_state:
+            report_data = st.session_state['parkinsons_report']
+            
+            analysis = report_data.get('ai_analysis', {})
+            st.info(analysis.get('summary', ''))
+            
+            risk_level = analysis.get('risk_level', 'Unknown')
+            risk_color = "red" if str(risk_level).lower() == "high" else ("orange" if str(risk_level).lower() == "moderate" else "green")
+            st.markdown(f"**Risk Level:** <span style='color:{risk_color}; font-weight:bold;'>{str(risk_level).upper()}</span>", unsafe_allow_html=True)
+            
+            recs = report_data.get('recommendations', {})
+            if recs.get('immediate_actions'):
+                 st.warning("**Immediate Actions:**\n" + "\n".join([f"- {x}" for x in recs.get('immediate_actions', [])]))
+                 
+            from utils.pdf_generator import generate_clinical_pdf
+            pdf_buffer = generate_clinical_pdf(report_data)
+            from datetime import datetime
+            st.download_button(
+                label="⬇️ Download Official PDF Report",
+                data=pdf_buffer,
+                file_name=f"parkinsons_report_{user_id}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
 
 if __name__ == "__main__":
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
