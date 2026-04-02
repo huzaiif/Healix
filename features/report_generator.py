@@ -1,5 +1,6 @@
 import json
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from utils.helpers import get_google_api_key
 
 def generate_structured_report(patient_info, vitals, symptoms):
@@ -7,8 +8,6 @@ def generate_structured_report(patient_info, vitals, symptoms):
     if not api_key:
         return None
         
-    genai.configure(api_key=api_key)
-    
     schema = """
     {
         "ai_analysis": {
@@ -41,10 +40,12 @@ def generate_structured_report(patient_info, vitals, symptoms):
     """
     
     try:
-        model = genai.GenerativeModel("gemini-flash-lite-latest", system_instruction=system_prompt)
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-flash-lite-latest",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
                 response_mime_type="application/json"
             )
         )
@@ -70,8 +71,6 @@ def generate_ml_structured_report(disease_name, patient_info, ml_inputs, diagnos
     if not api_key:
         return None
         
-    genai.configure(api_key=api_key)
-    
     schema = """
     {
         "ai_analysis": {
@@ -105,10 +104,12 @@ def generate_ml_structured_report(disease_name, patient_info, ml_inputs, diagnos
     """
     
     try:
-        model = genai.GenerativeModel("gemini-flash-lite-latest", system_instruction=system_prompt)
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-flash-lite-latest",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
                 response_mime_type="application/json"
             )
         )

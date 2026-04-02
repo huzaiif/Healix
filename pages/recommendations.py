@@ -3,6 +3,52 @@ from features.recommendation import predict_diabetes, predict_heart_disease, pre
 from features.chatbot import generate_health_tips
 from database.db import save_recommendation, save_report
 
+def render_facility_recommendations(disease_name: str, risk_level: str, tab_key: str):
+    st.markdown("<hr style='margin: 2rem 0; opacity: 0.2;'>", unsafe_allow_html=True)
+    st.subheader("🏥 Find Nearby Healthcare Facilities")
+    st.markdown(f"Based on your **{risk_level}** risk assessment, we can recommend appropriate care.")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        location = st.text_input("Enter your city or zip code:", key=f"loc_input_{tab_key}", placeholder="e.g., New York, NY")
+    with col2:
+        st.write("")
+        st.write("")
+        search_pressed = st.button("Search Options", key=f"btn_search_{tab_key}", use_container_width=True)
+        
+    if search_pressed and location:
+        with st.spinner(f"Finding best options near {location}..."):
+            from features.facility_recommender import get_healthcare_recommendations
+            result = get_healthcare_recommendations(location, risk_level, disease_name)
+            
+            if "error" in result:
+                st.error(result["error"])
+            elif not result.get("data"):
+                st.warning("No facilities found nearby.")
+            else:
+                st.success(f"Found top matches for **{result['data'][0]['care_type']}** near {location}")
+                
+                cols = st.columns(3)
+                for i, rec in enumerate(result["data"]):
+                    with cols[i]:
+                        st.markdown(f'''
+                        <div class="facility-card">
+                            <div class="facility-img-container">
+                                <img src="{rec['image_url']}" class="facility-img" alt="{rec['care_type']}">
+                            </div>
+                            <div class="facility-content">
+                                <h4 class="facility-title">{rec['name']}</h4>
+                                <div class="facility-meta">
+                                    <span class="facility-badge">{rec['care_type']}</span>
+                                    <span class="facility-distance">📍 {rec['distance_miles']} mi</span>
+                                </div>
+                                <p class="facility-address">{rec['address']}</p>
+                                <p class="facility-reason"><strong>Why:</strong> {rec['reason']}</p>
+                                <a href="{rec['maps_url']}" target="_blank" class="facility-btn">🗺️ Open in Maps</a>
+                            </div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+
 def show_recommendations():
     st.title("Disease Risk Assessment 🩺")
     st.markdown("Use our ML models to assess your risk for specific conditions.")
@@ -87,6 +133,8 @@ def show_recommendations():
                 mime="application/pdf",
                 use_container_width=True
             )
+            
+            render_facility_recommendations("Diabetes", risk_level, "diabetes")
                 
     with tab2:
         st.subheader("Heart Disease Prediction")
@@ -168,6 +216,8 @@ def show_recommendations():
                 mime="application/pdf",
                 use_container_width=True
             )
+
+            render_facility_recommendations("Heart Disease", risk_level, "heart")
 
     with tab3:
         st.subheader("Parkinson's Disease Prediction")
@@ -262,6 +312,8 @@ def show_recommendations():
                 mime="application/pdf",
                 use_container_width=True
             )
+            
+            render_facility_recommendations("Parkinson's Disease", risk_level, "parkinsons")
 
 if __name__ == "__main__":
     if 'logged_in' in st.session_state and st.session_state['logged_in']:

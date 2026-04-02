@@ -1,6 +1,11 @@
 import os
 import pickle
+import warnings
 import streamlit as st
+from sklearn.exceptions import InconsistentVersionWarning
+
+warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+warnings.filterwarnings("ignore", message=".*does not have valid feature names.*")
 
 @st.cache_resource
 def load_prediction_models():
