@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+/* ── Chat page body overrides ─────────────────────────────── */
+body { overflow: hidden; }
+.main-content { padding: 0; height: calc(100vh - 64px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-page">
+
+    <!-- ── History Drawer ──────────────────────────────────────────── -->
+    <aside class="chat-drawer" id="chatDrawer">
+        <div class="drawer-header">
+            <span class="drawer-title"><i class="fas fa-history"></i> Conversations</span>
+            <button class="drawer-new-btn" id="newChatBtn" title="New Chat">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+
+        <!-- Search -->
+        <div class="drawer-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="historySearch" placeholder="Search history..." autocomplete="off">
+        </div>
+
+        <!-- History list rendered by JS -->
+        <div class="drawer-list" id="drawerList">
+            <div class="drawer-empty" id="drawerEmpty">
+                <i class="fas fa-comments"></i>
+                <p>No conversations yet.<br>Start chatting!</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Drawer toggle for small screens -->
+    <button class="drawer-toggle" id="drawerToggle" title="Toggle history">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- ── Main Chat Area ──────────────────────────────────────────── -->
+    <section class="chat-main">
+
+        <!-- Top bar -->
+        <div class="chat-topbar">
+            <div class="chat-topbar-info">
+                <div class="bot-avatar-sm"><i class="fas fa-robot"></i></div>
+                <div>
+                    <div class="bot-name">Healix AI</div>
+                    <div class="bot-status"><span class="status-dot"></span> Online &amp; Ready</div>
+                </div>
+            </div>
+            <button class="btn-icon-sm danger" id="clearChatBtn" title="Clear chat">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+
+        <!-- Messages -->
+        <div class="chat-messages" id="chatBox">
+            <!-- Welcome splash -->
+            <div class="chat-welcome" id="chatWelcome">
+                <div class="welcome-bot-icon"><i class="fas fa-robot"></i></div>
+                <h2>How can I help you today?</h2>
+                <p>Ask me anything about your health, medications, symptoms, or disease assessments.</p>
+                <div class="welcome-chips">
+                    <button class="chip" onclick="sendChip(this)">What is diabetes?</button>
+                    <button class="chip" onclick="sendChip(this)">How to lower cholesterol?</button>
+                    <button class="chip" onclick="sendChip(this)">Signs of heart disease</button>
+                    <button class="chip" onclick="sendChip(this)">Parkinson's early symptoms</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input bar -->
+        <div class="chat-input-bar">
+            <form id="chatForm" autocomplete="off">
+                <div class="chat-input-wrap">
+                    <textarea id="chatInput"
+                              placeholder="Ask Healix AI anything…"
+                              rows="1"
+                              maxlength="2000"></textarea>
+                    <button type="submit" class="send-btn" id="sendBtn" disabled>
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+                <div class="input-hint">AI responses are informational only — always consult a doctor for medical advice.</div>
+            </form>
+        </div>
+
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+/* ──────────────────────────────────────────────────────────
+   Healix Chat + History Drawer
+────────────────────────────────────────────────────────── */
+const chatBox      = document.getElementById('chatBox');
+const chatForm     = document.getElementById('chatForm');
+const chatInput    = document.getElementById('chatInput');
+const sendBtn      = document.getElementById('sendBtn');
+const clearChatBtn = document.getElementById('clearChatBtn');
+const drawerList   = document.getElementById('drawerList');
+const drawerEmpty  = document.getElementById('drawerEmpty');
+const chatWelcome  = document.getElementById('chatWelcome');
+const historySearch= document.getElementById('historySearch');
+const drawerToggle = document.getElementById('drawerToggle');
+const chatDrawer   = document.getElementById('chatDrawer');
+const newChatBtn   = document.getElementById('newChatBtn');
+
+let activeSessionId = null;
+let allSessions = [];
+
+// ── Textarea auto-resize & send-btn enable ─────────────────
+chatInput.addEventListener('input', () => {
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+    sendBtn.disabled = chatInput.value.trim().length === 0;
+});
+
+// Enter sends, Shift+Enter = newline
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!sendBtn.disabled) chatForm.dispatchEvent(new Event('submit'));
+    }
+});
+
+// ── Message builders ───────────────────────────────────────
+function appendMessage(role, content) {
+    chatWelcome.style.display = 'none';
+    const wrap = document.createElement('div');
+    wrap.className = `chat-msg-wrap ${role}`;
+
+    const now = new Date();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (role === 'assistant') {
+        wrap.innerHTML = `
+            <div class="msg-avatar"><i class="fas fa-robot"></i></div>
+            <div class="msg-bubble-wrap">
+                <div class="msg-bubble assistant">${marked.parse(content)}</div>
+                <div class="msg-meta">${time}</div>
+            </div>`;
+    } else {
+        wrap.innerHTML = `
+            <div class="msg-bubble-wrap">
+                <div class="msg-bubble user">${escapeHtml(content)}</div>
+                <div class="msg-meta">${time}</div>
+            </div>
+            <div class="msg-avatar user-av"><i class="fas fa-user"></i></div>`;
+    }
+    chatBox.appendChild(wrap);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return wrap;
+}
+
+function appendTyping() {
+    chatWelcome.style.display = 'none';
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-msg-wrap assistant';
+    wrap.id = 'typingIndicator';
+    wrap.innerHTML = `
+        <div class="msg-avatar"><i class="fas fa-robot"></i></div>
+        <div class="msg-bubble assistant typing-dots">
+            <span></span><span></span><span></span>
+        </div>`;
+    chatBox.appendChild(wrap);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function removeTyping() {
+    const t = document.getElementById('typingIndicator');
+    if (t) t.remove();
+}
+
+function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── History drawer ─────────────────────────────────────────
+function groupByDate(items) {
+    const groups = {};
+    items.forEach(item => {
+        const d = item.created_at ? item.created_at.substring(0, 10) : 'Unknown';
+        if (!groups[d]) groups[d] = [];
+        groups[d].push(item);
+    });
+    return groups;
+}
+
+function renderDrawer(sessions) {
+    drawerList.innerHTML = '';
+    const filtered = historySearch.value
+        ? sessions.filter(s => s.title.toLowerCase().includes(historySearch.value.toLowerCase()))
+        : sessions;
+
+    drawerEmpty.style.display = filtered.length === 0 ? 'flex' : 'none';
+
+    const groups = groupByDate(filtered);
+    Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(date => {
+        const label = document.createElement('div');
+        label.className = 'drawer-date-label';
+        label.textContent = formatDate(date);
+        drawerList.appendChild(label);
+
+        groups[date].forEach(session => {
+            const item = document.createElement('div');
+            item.className = 'drawer-item' + (activeSessionId === session.id ? ' active' : '');
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.innerHTML = `<i class="fas fa-comment-dots" style="margin-right:8px;"></i>${escapeHtml(session.title)}`;
+            titleSpan.style.flex = "1";
+            titleSpan.style.overflow = "hidden";
+            titleSpan.style.textOverflow = "ellipsis";
+            titleSpan.style.whiteSpace = "nowrap";
+            titleSpan.style.cursor = "pointer";
+            titleSpan.onclick = () => loadSessionHistory(session.id);
+            item.appendChild(titleSpan);
+            
+            const deleteBtn = document.createElement('i');
+            deleteBtn.className = "fas fa-trash-alt";
+            deleteBtn.style.cursor = "pointer";
+            deleteBtn.style.marginLeft = "8px";
+            deleteBtn.style.fontSize = "0.85em";
+            deleteBtn.style.opacity = "0.6";
+            deleteBtn.onclick = async (e) => {
+                e.stopPropagation();
+                if(confirm("Delete this chat?")) {
+                    await fetch('/api/chat/sessions/' + session.id, {method: 'DELETE'});
+                    if(activeSessionId === session.id) {
+                        newChat();
+                    }
+                    loadSessions();
+                }
+            };
+            item.appendChild(deleteBtn);
+            
+            item.title = session.title;
+            drawerList.appendChild(item);
+        });
+    });
+    if (filtered.length) drawerList.appendChild(drawerEmpty);
+}
+
+function formatDate(dateStr) {
+    const today = new Date().toISOString().substring(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().substring(0, 10);
+    if (dateStr === today) return 'Today';
+    if (dateStr === yesterday) return 'Yesterday';
+    return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+historySearch.addEventListener('input', () => renderDrawer(allSessions));
+
+// ── Load sessions on page open ──────────────────────────────
+function loadSessions() {
+    fetch('/api/chat/sessions')
+        .then(r => r.json())
+        .then(data => {
+            allSessions = data;
+            renderDrawer(allSessions);
+        });
+}
+
+function loadSessionHistory(sessionId) {
+    activeSessionId = sessionId;
+    renderDrawer(allSessions);
+    
+    fetch('/api/chat/history?session_id=' + sessionId)
+        .then(r => r.json())
+        .then(data => {
+            chatBox.innerHTML = '';
+            chatWelcome.style.display = 'none';
+            if (data.length > 0) {
+                data.forEach(m => appendMessage(m.role, m.message));
+            } else {
+                chatBox.appendChild(chatWelcome);
+                chatWelcome.style.display = 'flex';
+            }
+        });
+    
+    if (window.innerWidth < 768) {
+        chatDrawer.classList.remove('open');
+    }
+}
+
+loadSessions();
+
+// ── Send message ───────────────────────────────────────────
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const prompt = chatInput.value.trim();
+    if (!prompt) return;
+
+    appendMessage('user', prompt);
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+    sendBtn.disabled = true;
+    appendTyping();
+
+    try {
+        const res  = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, session_id: activeSessionId })
+        });
+        const data = await res.json();
+        removeTyping();
+        appendMessage('assistant', data.response);
+        
+        if (!activeSessionId && data.session_id) {
+            activeSessionId = data.session_id;
+            loadSessions();
+        }
+    } catch {
+        removeTyping();
+        appendMessage('assistant', 'Sorry, I couldn\'t connect to the server. Please try again.');
+    }
+});
+
+// ── Clear chat ─────────────────────────────────────────────
+clearChatBtn.addEventListener('click', async () => {
+    if (!confirm('Clear the current chat history?')) return;
+    await fetch('/api/chat/clear', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: activeSessionId })
+    });
+    chatBox.innerHTML = '';
+    chatBox.appendChild(chatWelcome);
+    chatWelcome.style.display = 'flex';
+    // Optionally remove the session from the list if it was cleared
+    if(activeSessionId) {
+        loadSessionHistory(activeSessionId); // Reload to show empty
+    }
+});
+
+// ── New chat ───────────────────────────────────────────────
+function newChat() {
+    activeSessionId = null;
+    chatBox.innerHTML = '';
+    chatBox.appendChild(chatWelcome);
+    chatWelcome.style.display = 'flex';
+    renderDrawer(allSessions);
+    if (window.innerWidth < 768) {
+        chatDrawer.classList.remove('open');
+    }
+}
+newChatBtn.addEventListener('click', newChat);
+
+// ── Suggestion chips ───────────────────────────────────────
+function sendChip(btn) {
+    chatInput.value = btn.textContent;
+    sendBtn.disabled = false;
+    chatForm.dispatchEvent(new Event('submit'));
+}
+
+// ── Drawer toggle (mobile) ─────────────────────────────────
+drawerToggle.addEventListener('click', () => {
+    chatDrawer.classList.toggle('open');
+});
+
+document.addEventListener('click', (e) => {
+    if (!chatDrawer.contains(e.target) && !drawerToggle.contains(e.target)) {
+        chatDrawer.classList.remove('open');
+    }
+});
+</script>
+{% endblock %}

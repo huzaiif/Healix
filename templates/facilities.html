@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-hospital"></i> Find Care Facilities</h2>
+    <p>Locate nearby hospitals, clinics, or doctors based on your health assessment.</p>
+</div>
+
+<div class="profile-card mb-4">
+    <form action="{{ url_for('facilities') }}" method="POST">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="location">Your Location (City or Zip Code)</label>
+                <div class="input-icon">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input type="text" id="location" name="location" value="{{ location }}" required placeholder="e.g. New York, NY">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="disease">Condition/Disease</label>
+                <div class="input-icon">
+                    <i class="fas fa-notes-medical"></i>
+                    <input type="text" id="disease" name="disease" value="{{ disease }}" required placeholder="e.g. Diabetes, General">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="risk_level">Assessed Risk Level</label>
+                <div class="input-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <select id="risk_level" name="risk_level" class="form-control" style="padding-left: 2.75rem;">
+                        <option value="Low" {% if risk_level|lower == 'low' %}selected{% endif %}>Low (Consult General Physician)</option>
+                        <option value="Moderate" {% if risk_level|lower == 'moderate' %}selected{% endif %}>Moderate (Visit Clinic)</option>
+                        <option value="High" {% if risk_level|lower == 'high' %}selected{% endif %}>High (Go to Hospital)</option>
+                        <option value="Critical" {% if risk_level|lower == 'critical' %}selected{% endif %}>Critical (Emergency Hospital)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-search"></i> Find Facilities</button>
+    </form>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+</div>
+{% endif %}
+
+{% if recommendations %}
+<h3 class="mb-3">Recommended Facilities</h3>
+<div class="reports-grid">
+    {% for rec in recommendations %}
+    <div class="report-card facility-card">
+        <div class="report-icon" style="color: var(--primary-color);">
+            <i class="fas {% if rec.care_type == 'Hospital' %}fa-hospital-symbol{% elif rec.care_type == 'Clinic' %}fa-clinic-medical{% else %}fa-user-md{% endif %}"></i>
+        </div>
+        <div class="report-info flex-grow-1">
+            <h4>{{ rec.name }}</h4>
+            <p class="text-secondary" style="font-size: 0.9rem;">{{ rec.address }}</p>
+            <p class="mt-1"><strong>{{ rec.care_type }}</strong> • {{ rec.distance_miles }} miles away</p>
+            <p class="text-success" style="font-size: 0.85rem;"><i class="fas fa-check-circle"></i> {{ rec.reason }}</p>
+        </div>
+        <div class="report-actions">
+            <a href="{{ rec.maps_url }}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-directions"></i> Get Directions</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% elif request.method == 'POST' and not error %}
+<div class="empty-state">
+    <i class="fas fa-search-minus empty-icon"></i>
+    <h3>No Facilities Found</h3>
+    <p>We couldn't find any {{ risk_level }} risk facilities near {{ location }}. Try a broader search.</p>
+</div>
+{% endif %}
+{% endblock %}

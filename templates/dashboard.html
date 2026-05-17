@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- ── Dashboard Header ──────────────────────────────────────────────── -->
+<div class="dashboard-header">
+    <div class="dh-text">
+        <h1>Welcome back, <span class="gradient-name">{{ username }}</span> 👋</h1>
+        <p class="dh-sub">Your personal AI-powered health command centre.</p>
+    </div>
+    <div class="dh-badge">
+        <i class="fas fa-shield-alt"></i>
+        <span>Active &amp; Protected</span>
+    </div>
+</div>
+
+<!-- ── Stat Cards ────────────────────────────────────────────────────── -->
+<div class="metrics-grid">
+    <div class="metric-card mc-blue">
+        <div class="mc-icon"><i class="fas fa-file-medical"></i></div>
+        <div class="metric-value">{{ reports_count }}</div>
+        <div class="metric-label">Saved Reports</div>
+    </div>
+    <div class="metric-card mc-purple">
+        <div class="mc-icon"><i class="fas fa-stethoscope"></i></div>
+        <div class="metric-value">{{ recs_count }}</div>
+        <div class="metric-label">Assessments Taken</div>
+    </div>
+    <div class="metric-card mc-green">
+        <div class="mc-icon"><i class="fas fa-heartbeat"></i></div>
+        <div class="metric-value">Active</div>
+        <div class="metric-label">Status</div>
+    </div>
+</div>
+
+<!-- ── Disease Trend Charts ──────────────────────────────────────────── -->
+<div class="section-title">
+    <i class="fas fa-chart-area"></i>
+    <h2>Disease Trend Analytics</h2>
+    <p>Charts update automatically each time you submit an assessment.</p>
+</div>
+
+<div class="charts-grid">
+
+    <!-- Diabetes -->
+    <div class="chart-card chart-diabetes">
+        <div class="chart-card-header">
+            <div class="chart-icon diabetes-icon"><i class="fas fa-tint"></i></div>
+            <div>
+                <h3>Diabetes Metrics</h3>
+                <p>Glucose · BMI · Blood Pressure over time</p>
+            </div>
+            <div class="chart-badge" id="diabetes-badge">—</div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="diabetesChart"></canvas>
+            <div class="chart-empty" id="diabetesEmpty">
+                <i class="fas fa-chart-line"></i>
+                <p>No data yet. Take a Diabetes assessment to see trends.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heart Disease -->
+    <div class="chart-card chart-heart">
+        <div class="chart-card-header">
+            <div class="chart-icon heart-icon"><i class="fas fa-heart"></i></div>
+            <div>
+                <h3>Heart Health Metrics</h3>
+                <p>Cholesterol · Max HR · Resting BP over time</p>
+            </div>
+            <div class="chart-badge" id="heart-badge">—</div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="heartChart"></canvas>
+            <div class="chart-empty" id="heartEmpty">
+                <i class="fas fa-chart-line"></i>
+                <p>No data yet. Take a Heart Disease assessment to see trends.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parkinson's -->
+    <div class="chart-card chart-parkinsons">
+        <div class="chart-card-header">
+            <div class="chart-icon park-icon"><i class="fas fa-brain"></i></div>
+            <div>
+                <h3>Parkinson's Voice Metrics</h3>
+                <p>MDVP Fo · Fhi · HNR over time</p>
+            </div>
+            <div class="chart-badge" id="parkinsons-badge">—</div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="parkinsonsChart"></canvas>
+            <div class="chart-empty" id="parkinsonsEmpty">
+                <i class="fas fa-chart-line"></i>
+                <p>No data yet. Take a Parkinson's assessment to see trends.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Quick Actions ──────────────────────────────────────────────────── -->
+<div class="quick-actions">
+    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+    <div class="actions-grid">
+        <div class="action-card info-card">
+            <i class="fas fa-robot action-icon"></i>
+            <h4>AI Chatbot</h4>
+            <p>Get real-time medical guidance from Healix AI.</p>
+            <a href="{{ url_for('chat') }}" class="btn btn-primary btn-sm">Start Chat</a>
+        </div>
+        <div class="action-card success-card">
+            <i class="fas fa-stethoscope action-icon"></i>
+            <h4>Health Assessment</h4>
+            <p>Predict your disease risk with our ML models.</p>
+            <a href="{{ url_for('assessments') }}" class="btn btn-outline btn-sm">Take Assessment</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-filler@2.0.0/dist/chartjs-plugin-filler.min.js"></script>
+<script>
+// ── Data from Flask ─────────────────────────────────────────────────────
+const diabetesData    = {{ diabetes_chart | safe }};
+const heartData       = {{ heart_chart    | safe }};
+const parkinsonsData  = {{ parkinsons_chart | safe }};
+
+// ── Colour palettes ─────────────────────────────────────────────────────
+const PALETTES = {
+  diabetes:   ['#6366f1', '#06b6d4', '#f59e0b'],
+  heart:      ['#ef4444', '#f97316', '#fbbf24'],
+  parkinsons: ['#8b5cf6', '#a78bfa', '#c4b5fd'],
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+function makeGradient(ctx, color) {
+    const grad = ctx.createLinearGradient(0, 0, 0, 300);
+    grad.addColorStop(0, color + '55');
+    grad.addColorStop(1, color + '00');
+    return grad;
+}
+
+function latestResultBadge(badgeId, results) {
+    const badge = document.getElementById(badgeId);
+    if (!results || results.length === 0) { badge.textContent = '—'; return; }
+    const last = results[results.length - 1];
+    badge.textContent   = last ? '⚠ Positive' : '✓ Negative';
+    badge.style.background = last ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
+    badge.style.color      = last ? '#ef4444'               : '#10b981';
+    badge.style.border     = `1px solid ${last ? '#ef4444' : '#10b981'}`;
+}
+
+function buildChart(canvasId, emptyId, data, palette) {
+    const hasData = data.labels && data.labels.length > 0;
+    document.getElementById(emptyId).style.display = hasData ? 'none' : 'flex';
+    if (!hasData) return null;
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const datasets = data.datasets.map((ds, i) => {
+        const color = palette[i % palette.length];
+        return {
+            label:           ds.label,
+            data:            ds.data,
+            borderColor:     color,
+            backgroundColor: makeGradient(ctx, color),
+            borderWidth:     2.5,
+            pointBackgroundColor: color,
+            pointRadius:     5,
+            pointHoverRadius: 7,
+            tension:         0.45,
+            fill:            true,
+        };
+    });
+
+    return new Chart(ctx, {
+        type: 'line',
+        data: { labels: data.labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 900, easing: 'easeInOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#64748b',
+                        font:  { family: "'Plus Jakarta Sans', sans-serif", size: 12 },
+                        usePointStyle: true,
+                        pointStyleWidth: 8,
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15,23,42,0.92)',
+                    titleColor:  '#e2e8f0',
+                    bodyColor:   '#94a3b8',
+                    borderColor: 'rgba(99,102,241,0.3)',
+                    borderWidth: 1,
+                    padding:     12,
+                    cornerRadius: 10,
+                    callbacks: {
+                        afterBody: (items) => {
+                            const idx = items[0].dataIndex;
+                            const res = data.results[idx];
+                            return res !== undefined
+                                ? [`\nDiagnosis: ${res ? '⚠ Positive' : '✓ Negative'}`]
+                                : [];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid:  { color: 'rgba(100,116,139,0.08)' },
+                    ticks: { color: '#64748b', font: { size: 11 }, maxRotation: 30 }
+                },
+                y: {
+                    grid:  { color: 'rgba(100,116,139,0.08)' },
+                    ticks: { color: '#64748b', font: { size: 11 } }
+                }
+            }
+        }
+    });
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    buildChart('diabetesChart',   'diabetesEmpty',   diabetesData,   PALETTES.diabetes);
+    buildChart('heartChart',      'heartEmpty',      heartData,      PALETTES.heart);
+    buildChart('parkinsonsChart', 'parkinsonsEmpty', parkinsonsData, PALETTES.parkinsons);
+
+    latestResultBadge('diabetes-badge',   diabetesData.results);
+    latestResultBadge('heart-badge',      heartData.results);
+    latestResultBadge('parkinsons-badge', parkinsonsData.results);
+});
+</script>
+{% endblock %}

@@ -1,11 +1,11 @@
-# Hayat - Intelligent Disease Prediction & Health Assistant
+# Healix - Intelligent Disease Prediction & Health Assistant
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.29.0-FF4B4B)
 ![Gemini AI](https://img.shields.io/badge/Google%20GenAI-purple)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-**Hayat** is a comprehensive, AI-powered health platform that seamlessly integrates Machine Learning for disease prediction and Generative AI for personalized health advice. Designed with a modern user interface, the application provides risk assessments, intelligent healthcare facility recommendations, and downloadable clinical reports.
+**Healix** is a comprehensive, AI-powered health platform that seamlessly integrates Machine Learning for disease prediction and Generative AI for personalized health advice. Designed with a modern user interface, the application provides risk assessments, intelligent healthcare facility recommendations, and downloadable clinical reports.
 
 ## 🚀 Key Features
 
@@ -83,7 +83,7 @@
 
 ## ⚠️ Medical Disclaimer
 
-**Hayat is an informational tool and NOT a substitute for professional medical advice, diagnosis, or treatment.**
+**Healix is an informational tool and NOT a substitute for professional medical advice, diagnosis, or treatment.**
 * The predictions rely on machine learning models and may not necessarily represent actual medical diagnosis.
 * Always consult with a qualified healthcare provider for any medical concerns or before making any health-related decisions.
 * In case of a medical emergency, contact your local emergency services immediately.

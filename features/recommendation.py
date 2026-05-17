@@ -1,13 +1,13 @@
 import os
 import pickle
 import warnings
-import streamlit as st
+import functools
 from sklearn.exceptions import InconsistentVersionWarning
 
 warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
 warnings.filterwarnings("ignore", message=".*does not have valid feature names.*")
 
-@st.cache_resource
+@functools.lru_cache(maxsize=1)
 def load_prediction_models():
     working_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     diabetes_model_path = os.path.join(working_dir, 'saved_models', 'diabetes_model.sav')

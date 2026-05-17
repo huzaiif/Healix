@@ -1,152 +1,177 @@
-import sqlite3
 import os
+import json
+from supabase import create_client, Client
+from dotenv import load_dotenv
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "health_gpt.db")
+load_dotenv()
 
-def get_connection():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_supabase() -> Client:
+    url: str = os.environ.get("SUPABASE_URL")
+    key: str = os.environ.get("SUPABASE_KEY")
+    if not url or not key:
+        print("Warning: SUPABASE_URL or SUPABASE_KEY not found in environment variables")
+        return None
+    return create_client(url, key)
 
-def create_user(username, email, password_hash):
-    conn = get_connection()
-    cursor = conn.cursor()
+supabase = get_supabase()
+
+def create_chat_session(user_id, title="New Chat"):
     try:
-        cursor.execute("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
-                       (username, email, password_hash))
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
-    finally:
-        conn.close()
+        response = supabase.table('chat_sessions').insert({
+            "user_id": user_id,
+            "title": title
+        }).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        print(f"Error creating chat session: {e}")
+        return None
 
-def authenticate_user(username):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
-    user = cursor.fetchone()
-    conn.close()
-    return dict(user) if user else None
+def get_chat_sessions(user_id):
+    try:
+        response = supabase.table('chat_sessions').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+        return response.data
+    except Exception as e:
+        print(f"Error getting chat sessions: {e}")
+        return []
 
-def get_user_by_id(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-    user = cursor.fetchone()
-    conn.close()
-    return dict(user) if user else None
+def delete_chat_session(session_id, user_id):
+    try:
+        supabase.table('chat_sessions').delete().eq('id', session_id).eq('user_id', user_id).execute()
+    except Exception as e:
+        print(f"Error deleting chat session: {e}")
 
-def save_chat(user_id, message, role):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO chat_history (user_id, message, role) VALUES (?, ?, ?)",
-                   (user_id, message, role))
-    conn.commit()
-    conn.close()
+def save_chat(user_id, session_id, message, role):
+    try:
+        supabase.table('chat_history').insert({
+            "user_id": user_id,
+            "session_id": session_id,
+            "message": message,
+            "role": role
+        }).execute()
+    except Exception as e:
+        print(f"Error saving chat: {e}")
 
-def get_chat_history(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM chat_history WHERE user_id = ? ORDER BY timestamp ASC", (user_id,))
-    chats = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in chats]
+def get_chat_history(user_id, session_id=None):
+    try:
+        query = supabase.table('chat_history').select('*').eq('user_id', user_id)
+        if session_id:
+            query = query.eq('session_id', session_id)
+        response = query.order('timestamp', desc=False).execute()
+        return response.data
+    except Exception as e:
+        print(f"Error getting chat history: {e}")
+        return []
 
-def clear_chat_history(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM chat_history WHERE user_id = ?", (user_id,))
-    conn.commit()
-    conn.close()
+def clear_chat_history(user_id, session_id=None):
+    try:
+        query = supabase.table('chat_history').delete().eq('user_id', user_id)
+        if session_id:
+            query = query.eq('session_id', session_id)
+        query.execute()
+    except Exception as e:
+        print(f"Error clearing chat history: {e}")
 
 def save_health_record(user_id, age, weight, height, medical_conditions, allergies):
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    # Check if a record already exists
-    cursor.execute("SELECT id FROM health_records WHERE user_id = ?", (user_id,))
-    record = cursor.fetchone()
-    
-    if record:
-        cursor.execute("""
-            UPDATE health_records 
-            SET age = ?, weight = ?, height = ?, medical_conditions = ?, allergies = ?
-            WHERE user_id = ?
-        """, (age, weight, height, medical_conditions, allergies, user_id))
-    else:
-        cursor.execute("""
-            INSERT INTO health_records (user_id, age, weight, height, medical_conditions, allergies) 
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (user_id, age, weight, height, medical_conditions, allergies))
-        
-    conn.commit()
-    conn.close()
+    try:
+        response = supabase.table('health_records').select('id').eq('user_id', user_id).execute()
+        if response.data:
+            supabase.table('health_records').update({
+                "age": age,
+                "weight": weight,
+                "height": height,
+                "medical_conditions": medical_conditions,
+                "allergies": allergies
+            }).eq('user_id', user_id).execute()
+        else:
+            supabase.table('health_records').insert({
+                "user_id": user_id,
+                "age": age,
+                "weight": weight,
+                "height": height,
+                "medical_conditions": medical_conditions,
+                "allergies": allergies
+            }).execute()
+    except Exception as e:
+        print(f"Error saving health record: {e}")
 
 def get_health_record(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM health_records WHERE user_id = ?", (user_id,))
-    record = cursor.fetchone()
-    conn.close()
-    return dict(record) if record else None
+    try:
+        response = supabase.table('health_records').select('*').eq('user_id', user_id).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        print(f"Error getting health record: {e}")
+        return None
 
 def save_recommendation(user_id, recommendation_text, recommendation_type):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO recommendation_history (user_id, recommendation_text, recommendation_type)
-        VALUES (?, ?, ?)
-    """, (user_id, recommendation_text, recommendation_type))
-    conn.commit()
-    conn.close()
+    try:
+        supabase.table('recommendation_history').insert({
+            "user_id": user_id,
+            "recommendation_text": recommendation_text,
+            "recommendation_type": recommendation_type
+        }).execute()
+    except Exception as e:
+        print(f"Error saving recommendation: {e}")
 
 def get_recommendations(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM recommendation_history WHERE user_id = ? ORDER BY timestamp DESC", (user_id,))
-    recs = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in recs]
+    try:
+        response = supabase.table('recommendation_history').select('*').eq('user_id', user_id).order('timestamp', desc=True).execute()
+        return response.data
+    except Exception as e:
+        print(f"Error getting recommendations: {e}")
+        return []
 
 def save_report(user_id, title, content):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO saved_reports (user_id, title, content) VALUES (?, ?, ?)",
-                   (user_id, title, content))
-    conn.commit()
-    conn.close()
+    try:
+        supabase.table('saved_reports').insert({
+            "user_id": user_id,
+            "title": title,
+            "content": content
+        }).execute()
+    except Exception as e:
+        print(f"Error saving report: {e}")
 
 def get_reports(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM saved_reports WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
-    reports = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in reports]
+    try:
+        response = supabase.table('saved_reports').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+        return response.data
+    except Exception as e:
+        print(f"Error getting reports: {e}")
+        return []
 
-def delete_report(report_id, user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM saved_reports WHERE id = ? AND user_id = ?", (report_id, user_id))
-    conn.commit()
-    conn.close()
+def get_report_by_id(report_id, user_id):
+    try:
+        response = supabase.table('saved_reports').select('*').eq('id', report_id).eq('user_id', user_id).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        print(f"Error getting report by id: {e}")
+        return None
 
-def save_vitals_record(user_id, hr, temp, spo2, sys_bp, dia_bp, symptoms, risk_level, report_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO vitals_history 
-        (user_id, heart_rate, temperature, spo2, sys_bp, dia_bp, symptoms, ai_risk_level, report_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (user_id, hr, temp, spo2, sys_bp, dia_bp, symptoms, risk_level, report_id))
-    conn.commit()
-    conn.close()
+def save_assessment_metrics(user_id, disease, metrics_json, is_positive):
+    try:
+        supabase.table('assessment_metrics').insert({
+            "user_id": user_id,
+            "disease": disease,
+            "metrics": json.dumps(metrics_json) if isinstance(metrics_json, dict) else metrics_json,
+            "is_positive": int(is_positive)
+        }).execute()
+    except Exception as e:
+        print(f"Error saving assessment metrics: {e}")
 
-def get_vitals_history(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM vitals_history WHERE user_id = ? ORDER BY timestamp ASC", (user_id,))
-    records = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in records]
+def get_assessment_metrics(user_id, disease=None):
+    try:
+        query = supabase.table('assessment_metrics').select('*').eq('user_id', user_id)
+        if disease:
+            query = query.eq('disease', disease)
+        response = query.order('timestamp', desc=False).execute()
+        
+        result = []
+        for row in response.data:
+            try:
+                row['metrics'] = json.loads(row['metrics'])
+            except Exception:
+                row['metrics'] = {}
+            result.append(row)
+        return result
+    except Exception as e:
+        print(f"Error getting assessment metrics: {e}")
+        return []

@@ -1,4 +1,5 @@
 .env
+.env.*
 __pycache__/
 *.py[cod]
 *$py.class
@@ -6,3 +7,17 @@ __pycache__/
 venv/
 env/
 .DS_Store
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Databases & local state
+*.db
+*.sqlite3
+instance/

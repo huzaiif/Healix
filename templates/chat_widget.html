@@ -1,0 +1,200 @@
+<!-- Chat Widget Overlay -->
+<div class="chat-widget-overlay" id="chatWidgetOverlay">
+    <div class="chat-widget-backdrop" id="chatWidgetBackdrop" onclick="toggleChatWidget()"></div>
+    <div class="chat-widget-panel" id="chatWidgetPanel">
+        <!-- Top bar -->
+        <div class="chat-topbar">
+            <div class="chat-topbar-info">
+                <div class="bot-avatar-sm"><i class="fas fa-robot"></i></div>
+                <div>
+                    <div class="bot-name">Healix AI</div>
+                    <div class="bot-status"><span class="status-dot"></span> Online &amp; Ready</div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-icon-sm danger" id="widgetClearChatBtn" title="Clear chat">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                <button class="btn-icon-sm" id="widgetCloseBtn" title="Close chat" onclick="toggleChatWidget()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="chat-messages" id="widgetChatBox">
+            <!-- Welcome splash -->
+            <div class="chat-welcome" id="widgetChatWelcome">
+                <div class="welcome-bot-icon"><i class="fas fa-robot"></i></div>
+                <h2>How can I help you?</h2>
+                <p>Ask me anything about your health or disease assessments.</p>
+                <div class="welcome-chips" style="margin-top: 1rem;">
+                    <button class="chip" onclick="sendWidgetChip(this)">What is diabetes?</button>
+                    <button class="chip" onclick="sendWidgetChip(this)">How to lower cholesterol?</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input bar -->
+        <div class="chat-input-bar">
+            <form id="widgetChatForm" autocomplete="off">
+                <div class="chat-input-wrap">
+                    <textarea id="widgetChatInput"
+                              placeholder="Ask Healix AI anything…"
+                              rows="1"
+                              maxlength="2000"></textarea>
+                    <button type="submit" class="send-btn" id="widgetSendBtn" disabled>
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+                <div class="input-hint">AI responses are informational only — always consult a doctor.</div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+const widgetOverlay = document.getElementById('chatWidgetOverlay');
+const widgetChatBox = document.getElementById('widgetChatBox');
+const widgetChatForm = document.getElementById('widgetChatForm');
+const widgetChatInput = document.getElementById('widgetChatInput');
+const widgetSendBtn = document.getElementById('widgetSendBtn');
+const widgetChatWelcome = document.getElementById('widgetChatWelcome');
+const widgetClearChatBtn = document.getElementById('widgetClearChatBtn');
+
+let widgetHistoryLoaded = false;
+
+function toggleChatWidget() {
+    widgetOverlay.classList.toggle('open');
+    if (widgetOverlay.classList.contains('open') && !widgetHistoryLoaded) {
+        loadWidgetHistory();
+        widgetHistoryLoaded = true;
+    }
+}
+
+function openChatWidgetWithContext(contextMessage) {
+    widgetOverlay.classList.add('open');
+    widgetChatInput.value = contextMessage;
+    widgetChatInput.style.height = 'auto';
+    widgetSendBtn.disabled = false;
+    
+    // Auto submit the form
+    widgetChatForm.dispatchEvent(new Event('submit'));
+}
+
+widgetChatInput.addEventListener('input', () => {
+    widgetChatInput.style.height = 'auto';
+    widgetChatInput.style.height = Math.min(widgetChatInput.scrollHeight, 120) + 'px';
+    widgetSendBtn.disabled = widgetChatInput.value.trim().length === 0;
+});
+
+widgetChatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!widgetSendBtn.disabled) widgetChatForm.dispatchEvent(new Event('submit'));
+    }
+});
+
+function appendWidgetMessage(role, content) {
+    widgetChatWelcome.style.display = 'none';
+    const wrap = document.createElement('div');
+    wrap.className = `chat-msg-wrap ${role}`;
+
+    const now = new Date();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (role === 'assistant') {
+        wrap.innerHTML = `
+            <div class="msg-avatar"><i class="fas fa-robot"></i></div>
+            <div class="msg-bubble-wrap">
+                <div class="msg-bubble assistant">${marked.parse(content)}</div>
+                <div class="msg-meta">${time}</div>
+            </div>`;
+    } else {
+        wrap.innerHTML = `
+            <div class="msg-bubble-wrap">
+                <div class="msg-bubble user">${escapeHtmlWidget(content)}</div>
+                <div class="msg-meta">${time}</div>
+            </div>
+            <div class="msg-avatar user-av"><i class="fas fa-user"></i></div>`;
+    }
+    widgetChatBox.appendChild(wrap);
+    widgetChatBox.scrollTop = widgetChatBox.scrollHeight;
+    return wrap;
+}
+
+function appendWidgetTyping() {
+    widgetChatWelcome.style.display = 'none';
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-msg-wrap assistant';
+    wrap.id = 'widgetTypingIndicator';
+    wrap.innerHTML = `
+        <div class="msg-avatar"><i class="fas fa-robot"></i></div>
+        <div class="msg-bubble assistant typing-dots">
+            <span></span><span></span><span></span>
+        </div>`;
+    widgetChatBox.appendChild(wrap);
+    widgetChatBox.scrollTop = widgetChatBox.scrollHeight;
+}
+
+function removeWidgetTyping() {
+    const t = document.getElementById('widgetTypingIndicator');
+    if (t) t.remove();
+}
+
+function escapeHtmlWidget(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadWidgetHistory() {
+    fetch('/api/chat/history')
+        .then(r => r.json())
+        .then(data => {
+            if (data.length > 0) {
+                widgetChatWelcome.style.display = 'none';
+                data.forEach(m => appendWidgetMessage(m.role, m.message));
+            }
+        });
+}
+
+widgetChatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const prompt = widgetChatInput.value.trim();
+    if (!prompt) return;
+
+    appendWidgetMessage('user', prompt);
+    widgetChatInput.value = '';
+    widgetChatInput.style.height = 'auto';
+    widgetSendBtn.disabled = true;
+    appendWidgetTyping();
+
+    try {
+        const res  = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+        removeWidgetTyping();
+        appendWidgetMessage('assistant', data.response);
+    } catch {
+        removeWidgetTyping();
+        appendWidgetMessage('assistant', 'Sorry, I couldn\'t connect to the server. Please try again.');
+    }
+});
+
+widgetClearChatBtn.addEventListener('click', async () => {
+    if (!confirm('Clear all chat history?')) return;
+    await fetch('/api/chat/clear', { method: 'POST' });
+    widgetChatBox.innerHTML = '';
+    widgetChatBox.appendChild(widgetChatWelcome);
+    widgetChatWelcome.style.display = 'flex';
+});
+
+function sendWidgetChip(btn) {
+    widgetChatInput.value = btn.textContent;
+    widgetSendBtn.disabled = false;
+    widgetChatForm.dispatchEvent(new Event('submit'));
+}
+</script>

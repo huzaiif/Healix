@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark'; // Default to dark for premium SaaS feel
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            {{ message }}
+            <span class="close-btn" onclick="this.parentElement.style.display='none';">&times;</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% if session.get('logged_in') %}
+<!-- ── Top Navbar ──────────────────────────────────────────────────────── -->
+<header class="topnav" id="topnav">
+    <div class="topnav-inner">
+
+        <!-- Brand -->
+        <a href="{{ url_for('dashboard') }}" class="topnav-brand">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <span>Healix</span>
+        </a>
+
+        <!-- Centre links -->
+        <nav class="topnav-links" id="navLinks">
+            <a href="{{ url_for('dashboard') }}"   class="nav-link {% if request.path == '/dashboard'   %}active{% endif %}">
+                <i class="fas fa-home"></i><span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('assessments') }}" class="nav-link {% if request.path == '/assessments' %}active{% endif %}">
+                <i class="fas fa-stethoscope"></i><span>Assessments</span>
+            </a>
+            <a href="{{ url_for('chat') }}"        class="nav-link {% if request.path == '/chat'        %}active{% endif %}">
+                <i class="fas fa-comments"></i><span>AI Assistant</span>
+            </a>
+            <a href="{{ url_for('facilities') }}"  class="nav-link {% if request.path == '/facilities'  %}active{% endif %}">
+                <i class="fas fa-hospital"></i><span>Find Care</span>
+            </a>
+            <a href="{{ url_for('reports') }}"     class="nav-link {% if request.path == '/reports'     %}active{% endif %}">
+                <i class="fas fa-file-medical"></i><span>Reports</span>
+            </a>
+        </nav>
+
+        <!-- Right controls -->
+        <div class="topnav-right">
+            <button class="nav-avatar theme-toggle-btn" style="border:none; cursor:pointer; background:transparent;" title="Toggle Theme">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="{{ url_for('profile') }}" class="nav-avatar" title="Health Profile">
+                <i class="fas fa-user-circle"></i>
+                <span class="nav-username">{{ session.get('username', '') }}</span>
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-logout" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+            <!-- Mobile hamburger -->
+            <button class="hamburger" id="hamburger" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+
+    </div>
+</header>
+
+<!-- Mobile nav overlay -->
+<div class="nav-overlay" id="navOverlay"></div>
+{% endif %}
+
+<!-- ── Main ───────────────────────────────────────────────────────────── -->
+<main class="main-content {% if not session.get('logged_in') %}auth-page{% endif %}" id="mainContent">
+    {% block content %}{% endblock %}
+</main>
+
+{% if session.get('logged_in') %}
+<!-- ── Floating AI Bot Button ─────────────────────────────────────────── -->
+<button class="fab-bot" id="fabBot" title="Ask Healix AI" onclick="toggleChatWidget()">
+    <div class="fab-pulse"></div>
+    <i class="fas fa-robot"></i>
+    <span class="fab-label">AI</span>
+</button>
+
+{% include 'chat_widget.html' %}
+{% else %}
+<!-- ── Floating Theme Toggle for Auth Page ────────────────────────────── -->
+<button class="fab-bot theme-toggle-btn" style="left: 2rem; right: auto;" title="Toggle Theme">
+    <i class="fas fa-moon"></i>
+</button>
+{% endif %}
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+// Hamburger toggle
+const hamburger = document.getElementById('hamburger');
+const navLinks  = document.getElementById('navLinks');
+const overlay   = document.getElementById('navOverlay');
+if (hamburger) {
+    hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('open');
+        navLinks.classList.toggle('open');
+        overlay.classList.toggle('visible');
+    });
+    overlay.addEventListener('click', () => {
+        hamburger.classList.remove('open');
+        navLinks.classList.remove('open');
+        overlay.classList.remove('visible');
+    });
+}
+
+// Shrink navbar on scroll
+window.addEventListener('scroll', () => {
+    const nav = document.getElementById('topnav');
+    if (nav) nav.classList.toggle('scrolled', window.scrollY > 10);
+});
+
+// Hide FAB on chat page (we're already there)
+const fab = document.getElementById('fabBot');
+if (fab && window.location.pathname === '/chat') fab.style.display = 'none';
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

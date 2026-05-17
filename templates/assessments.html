@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="fas fa-stethoscope"></i> Health Assessments</h2>
+    <p>Predict disease risks using our specialized Machine Learning models</p>
+</div>
+
+{% if result %}
+<div class="assessment-result-card mb-4" style="border-left: 5px solid {% if result.is_positive %}#ef4444{% else %}#10b981{% endif %};">
+    <h3>Assessment Result: {{ active_tab | title }}</h3>
+    <p class="diagnosis-text"><strong>{{ result.diagnosis }}</strong></p>
+    
+    {% if report_data %}
+        <div class="ai-analysis-box mt-3">
+            <h4><i class="fas fa-robot text-primary"></i> AI Clinical Summary</h4>
+            <p>{{ report_data.ai_analysis.summary }}</p>
+            <p class="mt-2"><strong>Risk Level:</strong> <span class="badge {% if report_data.ai_analysis.risk_level|lower == 'high' %}bg-danger{% elif report_data.ai_analysis.risk_level|lower == 'moderate' %}bg-warning{% else %}bg-success{% endif %}">{{ report_data.ai_analysis.risk_level|upper }}</span></p>
+            
+            {% if report_data.recommendations.immediate_actions %}
+            <div class="alert alert-warning mt-3">
+                <strong><i class="fas fa-exclamation-triangle"></i> Immediate Actions:</strong>
+                <ul class="mb-0 mt-2">
+                    {% for action in report_data.recommendations.immediate_actions %}
+                    <li>{{ action }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <a href="{{ url_for('facilities', disease=active_tab|title, risk_level=report_data.ai_analysis.risk_level) }}" class="btn btn-primary btn-sm"><i class="fas fa-hospital"></i> Find Nearby Care</a>
+                <a href="{{ url_for('reports') }}" class="btn btn-outline btn-sm"><i class="fas fa-file-pdf"></i> View Official Report</a>
+                <button data-context="I just completed a {{ active_tab | title }} assessment. The diagnosis is: {{ result.diagnosis }}. Can you explain what this means and give me some advice?" onclick="openChatWidgetWithContext(this.getAttribute('data-context'))" class="btn btn-secondary btn-sm" style="background: var(--primary-color); color: white; border: none;"><i class="fas fa-robot"></i> Discuss with AI</button>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="assessments-container">
+    <div class="tabs">
+        <button class="tab-btn {% if active_tab == 'diabetes' %}active{% endif %}" onclick="openTab('diabetes')">Diabetes</button>
+        <button class="tab-btn {% if active_tab == 'heart' %}active{% endif %}" onclick="openTab('heart')">Heart Disease</button>
+        <button class="tab-btn {% if active_tab == 'parkinsons' %}active{% endif %}" onclick="openTab('parkinsons')">Parkinson's</button>
+    </div>
+
+    <!-- Diabetes Tab -->
+    <div id="diabetes" class="tab-content" style="display:{% if active_tab == 'diabetes' %}block{% else %}none{% endif %};">
+        <div class="assessment-card">
+            <h3>Diabetes Prediction</h3>
+            <p class="text-secondary mb-4">Enter your lab values to assess your risk.</p>
+            <form action="{{ url_for('assessments') }}" method="POST">
+                <input type="hidden" name="assessment_type" value="diabetes">
+                <div class="form-grid">
+                    <div class="form-group"><label>Pregnancies</label><input type="number" class="form-control" name="pregnancies" required></div>
+                    <div class="form-group"><label>Glucose</label><input type="number" class="form-control" name="glucose" required></div>
+                    <div class="form-group"><label>Blood Pressure</label><input type="number" class="form-control" name="blood_pressure" required></div>
+                    <div class="form-group"><label>Skin Thickness</label><input type="number" class="form-control" name="skin_thickness" required></div>
+                    <div class="form-group"><label>Insulin</label><input type="number" class="form-control" name="insulin" required></div>
+                    <div class="form-group"><label>BMI</label><input type="number" step="0.1" class="form-control" name="bmi" required></div>
+                    <div class="form-group"><label>Diabetes Pedigree Function</label><input type="number" step="0.001" class="form-control" name="dpf" required></div>
+                    <div class="form-group"><label>Age</label><input type="number" class="form-control" name="age" required></div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-4">Predict Result</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Heart Disease Tab -->
+    <div id="heart" class="tab-content" style="display:{% if active_tab == 'heart' %}block{% else %}none{% endif %};">
+        <div class="assessment-card">
+            <h3>Heart Disease Prediction</h3>
+            <p class="text-secondary mb-4">Enter your cardiovascular metrics.</p>
+            <form action="{{ url_for('assessments') }}" method="POST">
+                <input type="hidden" name="assessment_type" value="heart">
+                <div class="form-grid">
+                    <div class="form-group"><label>Age</label><input type="number" class="form-control" name="age" required></div>
+                    <div class="form-group"><label>Sex (1=Male, 0=Female)</label><input type="number" class="form-control" name="sex" min="0" max="1" required></div>
+                    <div class="form-group"><label>Chest Pain Type (0-3)</label><input type="number" class="form-control" name="cp" min="0" max="3" required></div>
+                    <div class="form-group"><label>Resting Blood Pressure</label><input type="number" class="form-control" name="trestbps" required></div>
+                    <div class="form-group"><label>Cholesterol</label><input type="number" class="form-control" name="chol" required></div>
+                    <div class="form-group"><label>Fasting Blood Sugar > 120 (1/0)</label><input type="number" class="form-control" name="fbs" min="0" max="1" required></div>
+                    <div class="form-group"><label>Resting ECG (0-2)</label><input type="number" class="form-control" name="restecg" min="0" max="2" required></div>
+                    <div class="form-group"><label>Max Heart Rate Achieved</label><input type="number" class="form-control" name="thalach" required></div>
+                    <div class="form-group"><label>Exercise Induced Angina (1/0)</label><input type="number" class="form-control" name="exang" min="0" max="1" required></div>
+                    <div class="form-group"><label>ST Depression (Oldpeak)</label><input type="number" step="0.1" class="form-control" name="oldpeak" required></div>
+                    <div class="form-group"><label>Slope of ST Segment (0-2)</label><input type="number" class="form-control" name="slope" min="0" max="2" required></div>
+                    <div class="form-group"><label>Major Vessels (0-4)</label><input type="number" class="form-control" name="ca" min="0" max="4" required></div>
+                    <div class="form-group"><label>Thal (0=Normal, 1=Fixed, 2=Reversable)</label><input type="number" class="form-control" name="thal" min="0" max="3" required></div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-4">Predict Result</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Parkinson's Tab -->
+    <div id="parkinsons" class="tab-content" style="display:{% if active_tab == 'parkinsons' %}block{% else %}none{% endif %};">
+        <div class="assessment-card">
+            <h3>Parkinson's Disease Prediction</h3>
+            <p class="text-secondary mb-4">Enter vocal frequency metrics.</p>
+            <form action="{{ url_for('assessments') }}" method="POST">
+                <input type="hidden" name="assessment_type" value="parkinsons">
+                <div class="form-grid">
+                    <div class="form-group"><label>MDVP:Fo(Hz)</label><input type="number" step="any" class="form-control" name="fo" required></div>
+                    <div class="form-group"><label>MDVP:Fhi(Hz)</label><input type="number" step="any" class="form-control" name="fhi" required></div>
+                    <div class="form-group"><label>MDVP:Flo(Hz)</label><input type="number" step="any" class="form-control" name="flo" required></div>
+                    <div class="form-group"><label>MDVP:Jitter(%)</label><input type="number" step="any" class="form-control" name="jitter_percent" required></div>
+                    <div class="form-group"><label>MDVP:Jitter(Abs)</label><input type="number" step="any" class="form-control" name="jitter_abs" required></div>
+                    <div class="form-group"><label>MDVP:RAP</label><input type="number" step="any" class="form-control" name="rap" required></div>
+                    <div class="form-group"><label>MDVP:PPQ</label><input type="number" step="any" class="form-control" name="ppq" required></div>
+                    <div class="form-group"><label>Jitter:DDP</label><input type="number" step="any" class="form-control" name="ddp" required></div>
+                    <div class="form-group"><label>MDVP:Shimmer</label><input type="number" step="any" class="form-control" name="shimmer" required></div>
+                    <div class="form-group"><label>MDVP:Shimmer(dB)</label><input type="number" step="any" class="form-control" name="shimmer_db" required></div>
+                    <div class="form-group"><label>Shimmer:APQ3</label><input type="number" step="any" class="form-control" name="apq3" required></div>
+                    <div class="form-group"><label>Shimmer:APQ5</label><input type="number" step="any" class="form-control" name="apq5" required></div>
+                    <div class="form-group"><label>MDVP:APQ</label><input type="number" step="any" class="form-control" name="apq" required></div>
+                    <div class="form-group"><label>Shimmer:DDA</label><input type="number" step="any" class="form-control" name="dda" required></div>
+                    <div class="form-group"><label>NHR</label><input type="number" step="any" class="form-control" name="nhr" required></div>
+                    <div class="form-group"><label>HNR</label><input type="number" step="any" class="form-control" name="hnr" required></div>
+                    <div class="form-group"><label>RPDE</label><input type="number" step="any" class="form-control" name="rpde" required></div>
+                    <div class="form-group"><label>DFA</label><input type="number" step="any" class="form-control" name="dfa" required></div>
+                    <div class="form-group"><label>spread1</label><input type="number" step="any" class="form-control" name="spread1" required></div>
+                    <div class="form-group"><label>spread2</label><input type="number" step="any" class="form-control" name="spread2" required></div>
+                    <div class="form-group"><label>D2</label><input type="number" step="any" class="form-control" name="d2" required></div>
+                    <div class="form-group"><label>PPE</label><input type="number" step="any" class="form-control" name="ppe" required></div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-4">Predict Result</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openTab(tabName) {
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(c => c.style.display = 'none');
+    
+    const btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(tabName).style.display = 'block';
+    event.currentTarget.classList.add('active');
+}
+</script>
+{% endblock %}
