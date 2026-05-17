@@ -1,93 +1,124 @@
-# Healix - Intelligent Disease Prediction & Health Assistant
+# Healix - Intelligent Disease Prediction & Premium AI Health Assistant
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.29.0-FF4B4B)
-![Gemini AI](https://img.shields.io/badge/Google%20GenAI-purple)
-![License](https://img.shields.io/badge/License-MIT-green)
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-3.0%2B-lightgrey?style=for-the-badge&logo=flask&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-emerald?style=for-the-badge&logo=supabase&logoColor=white)
+![Groq Llama 3](https://img.shields.io/badge/Groq%20AI-Llama%203.3-orange?style=for-the-badge&logo=meta&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-**Healix** is a comprehensive, AI-powered health platform that seamlessly integrates Machine Learning for disease prediction and Generative AI for personalized health advice. Designed with a modern user interface, the application provides risk assessments, intelligent healthcare facility recommendations, and downloadable clinical reports.
+**Healix** is a premium, AI-powered health platform that seamlessly integrates advanced Machine Learning classification models for disease risk assessment with a Generative AI clinical assistant. Designed with a dark SaaS-grade aesthetic, Healix provides dynamic predictive analytics, intelligent healthcare facility recommendations, session-based AI consults, and downloadable clinical PDF reports.
+
+---
 
 ## 🚀 Key Features
 
-* **🛡️ Secure User Authentication:** Full user account management with secure signup, login, and encrypted password storage using bcrypt.
-* **🤖 AI Health Chatbot:** An intelligent, conversational AI assistant powered by Google's GenAI model that answers health-related queries, offers lifestyle advice, and remembers your chat history.
-* **🩺 Disease Prediction Models:** Use carefully trained Machine Learning models to assess risks:
-  * **Diabetes:** Assesses probability based on Glucose, BMI, Insulin, Age, and more.
-  * **Heart Disease:** Predicts cardiovascular risks using Resting BP, Cholesterol, Max Heart Rate, etc.
-  * **Parkinson's Disease:** Detects early signs using multidimensional voice measurement data.
-* **🏥 Intelligent Location-Based Recommendations:** After a risk assessment, the application suggests the top nearby care facilities (Hospitals for high risk, Clinics for moderate risk, General Physicians for low risk) using the Geoapify API.
-* **📄 Clinical PDF Reports:** Easily generate, view, and download professional-grade PDF clinical reports based on your AI and ML assessment results.
-* **📊 Comprehensive User Dashboard:** Manage personal health profiles, access saved reports, review past disease recommendations, and keep track of all health interactions in one unified dashboard.
+* **🛡️ Cloud Auth & Session Management:** Integrated secure user management (Sign Up, Login, Forgot & Reset Password) powered securely by **Supabase Auth**.
+* **🤖 Session-Based AI Assistant:** Conversational medical consults powered by the high-speed **Groq API (Llama 3.3 70B)**. Includes a session history drawer to create, manage, or delete chat threads.
+* **🩺 Disease Risk Classifiers:** Predictive Machine Learning models trained to classify patient risks:
+  * **Diabetes:** Risk assessment based on Glucose, BMI, Insulin, Age, etc.
+  * **Heart Disease:** Cardiovascular risk evaluation utilizing resting BP, cholesterol, max heart rate, and chest pain indicators.
+  * **Parkinson's Disease:** Early symptom detection using multidimensional acoustic voice measurement data.
+* **📊 Dynamic Health Trend Analytics:** Real-time user dashboards featuring interactive **Chart.js** telemetry representing risk indicators and historical health trends across successive assessments.
+* **🏥 Geo-Location Care Recommender:** Location-based healthcare recommendations natively suggesting the most relevant care provider based on assessment severity (Hospitals for High risk, Clinics for Moderate, General Practitioners for Low) utilizing the **Geoapify API**.
+* **📄 Downloadable PDF Clinical Reports:** Generate instant, professional-grade clinical summaries compiled on demand with **ReportLab** ready for local downloading.
+
+---
 
 ## 🛠️ Technology Stack
 
-* **Frontend:** Streamlit, Streamlit Option Menu, Custom CSS (Dark/Light mode optimized)
-* **AI Integration:** Google GenAI (`google-genai`)
-* **Machine Learning:** Scikit-learn, Numpy, Pandas
-* **Database:** SQLite (with structured models for users, vitals, chat history, and reports)
-* **PDF Generation:** ReportLab
-* **Location Services:** Geoapify API
-* **Security:** Bcrypt, Python-dotenv
+* **Backend:** Flask (Python)
+* **Frontend:** Responsive HTML5, Vanilla CSS3 (Premium dark-theme SaaS design), JavaScript (ES6+), and **Chart.js**
+* **Cloud Database & Authentication:** Supabase (PostgreSQL Client)
+* **LLM Engine:** Groq SDK (`llama-3.3-70b-versatile`)
+* **Machine Learning:** Scikit-learn, Numpy
+* **PDF Report Generation:** ReportLab
+* **APIs:** Geoapify REST API (Facility Recommendations)
+
+---
 
 ## 📂 Project Structure
 
 ```
-├── app.py                      # Main Streamlit application and router
-├── auth/                       # User authentication and session management
-├── database/                   # SQLite database initialization and models
-├── features/                   # Core business logic (chatbot, predictions, facility recommender, report generator)
-├── pages/                      # Streamlit UI pages (Dashboard, Chat, Profile, Recommendations, Reports, History)
-├── utils/                      # Helper scripts (PDF generator, CSS loader)
-├── assets/                     # Images, CSS files, and other static assets
-├── saved_models/               # Pre-trained ML models (.sav)
-├── requirements.txt            # Python dependencies
+├── app.py                      # Flask backend controller and routing
+├── database/
+│   └── db.py                   # Supabase integration layers and DB operations
+├── features/
+│   ├── chatbot.py              # Groq assistant backend integration
+│   ├── recommendation.py       # Scikit-learn predictive ML models logic
+│   ├── facility_recommender.py # Geoapify location recommended care engine
+│   └── report_generator.py     # AI clinical text summaries generation
+├── templates/                  # Jinja2 Flask web page views
+│   ├── base.html               # Global UI wrapper & layout
+│   ├── dashboard.html          # Health metrics graphs and analytics dashboard
+│   ├── chat.html               # Unified AI Assistant chat interface
+│   ├── chat_widget.html        # Floating quick-chat overlay
+│   ├── assessments.html        # Multi-tab disease risk diagnostic inputs
+│   └── ...                     # Auth wrappers (login, register, reset password)
+├── static/
+│   ├── style.css               # Global premium dark-theme stylesheet
+│   └── script.js               # Global DOM animations and theme engine
+├── saved_models/               # Serialized ML classification models (.sav)
+├── utils/
+│   ├── helpers.py              # Load-environment configuration variables helper
+│   └── pdf_generator.py        # PDF compilation layout engine
+├── requirements.txt            # Python dependencies manifest
 └── README.md                   # Project documentation
 ```
 
-## ⚙️ Installation & Setup
+---
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/huzaiif/Health-GPT.git
-   cd Health-GPT
-   ```
+## ⚙️ Installation & Local Setup
 
-2. **Install Dependencies**
-   Ensure you have Python installed (3.8+ recommended). It's best practice to use a virtual environment.
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 1. Clone & Navigate to Repository
+```bash
+git clone https://github.com/huzaiif/Healix.git
+cd Healix
+```
 
-3. **Configure Environment Variables**
-   * Create a `.env` file in the root directory.
-   * Add your API keys required for the AI and location services:
-     ```env
-     GOOGLE_API_KEY=your_gemini_api_key_here
-     GEOAPIFY_API_KEY=your_geoapify_api_key_here
-     ```
+### 2. Configure Virtual Environment
+```bash
+python -m venv venv
+# Activate on Windows:
+venv\Scripts\activate
+```
 
-4. **Initialize Database and Run Application**
-   ```bash
-   # In terminal, run the streamlit app
-   streamlit run app.py
-   ```
-   *The database `health_gpt.db` will be auto-generated upon the application's first run.*
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-## 🧠 How It Works
+### 4. Setup Environment Variables
+Create a `.env` file in the root directory:
+```env
+# Flask
+FLASK_SECRET_KEY=your_flask_session_key
 
-1. **Registration & Login:** Securely log in to access your personalized health dashboard.
-2. **Setup Profile:** Enter your baseline medical history and body metrics.
-3. **Use the Assistant:** Chat directly with the AI for instant health insights.
-4. **Take Risk Assessments:** Enter lab values into the ML prediction tabs for Diabetes, Heart Disease, or Parkinson's. 
-5. **Get Advice & Recommendations:** Receive an AI-generated clinical summary, download it as a PDF, and explore suggested healthcare providers natively near your location.
+# Supabase Configurations
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your-supabase-anon-key
+
+# API Integrations
+GROQ_API_KEY=gsk_your_groq_api_key
+GEOAPIFY_API_KEY=your_geoapify_key
+```
+
+### 5. Launch the Server
+```bash
+python app.py
+```
+*Your application will start on **`http://127.0.0.1:8501`**.*
+
+---
 
 ## ⚠️ Medical Disclaimer
 
-**Healix is an informational tool and NOT a substitute for professional medical advice, diagnosis, or treatment.**
-* The predictions rely on machine learning models and may not necessarily represent actual medical diagnosis.
-* Always consult with a qualified healthcare provider for any medical concerns or before making any health-related decisions.
-* In case of a medical emergency, contact your local emergency services immediately.
+**Healix is strictly an informational and educational risk-assessment utility. It is NOT a substitute for professional medical advice, clinical diagnosis, or medical treatment.**
+* Predictive diagnostics are powered by automated ML classification models and do not serve as professional medical validations.
+* Always consult with a licensed physician or clinical expert before initiating any dietary, pharmaceutical, or clinical health adjustments.
+* In the event of a medical emergency, contact your local emergency response service immediately.
+
+---
 
 ## 👨‍💻 Author
 
-**Huzaif**
+Developed with ❤️ by **Huzaif**
