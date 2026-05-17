@@ -123,7 +123,6 @@
 {% block scripts %}
 <!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-filler@2.0.0/dist/chartjs-plugin-filler.min.js"></script>
 <script>
 // ── Data from Flask ─────────────────────────────────────────────────────
 const diabetesData    = {{ diabetes_chart | safe }};
@@ -147,6 +146,7 @@ function makeGradient(ctx, color) {
 
 function latestResultBadge(badgeId, results) {
     const badge = document.getElementById(badgeId);
+    if (!badge) return;
     if (!results || results.length === 0) { badge.textContent = '—'; return; }
     const last = results[results.length - 1];
     badge.textContent   = last ? '⚠ Positive' : '✓ Negative';
@@ -156,11 +156,16 @@ function latestResultBadge(badgeId, results) {
 }
 
 function buildChart(canvasId, emptyId, data, palette) {
-    const hasData = data.labels && data.labels.length > 0;
-    document.getElementById(emptyId).style.display = hasData ? 'none' : 'flex';
+    const hasData = data && data.labels && data.labels.length > 0 && data.datasets && data.datasets.length > 0;
+    const emptyEl = document.getElementById(emptyId);
+    if (emptyEl) {
+        emptyEl.style.display = hasData ? 'none' : 'flex';
+    }
     if (!hasData) return null;
 
-    const ctx = document.getElementById(canvasId).getContext('2d');
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+    const ctx = canvas.getContext('2d');
     const datasets = data.datasets.map((ds, i) => {
         const color = palette[i % palette.length];
         return {
